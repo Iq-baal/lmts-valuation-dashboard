@@ -1,234 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LMTS Valuation Dashboard</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>LMTS Valuation Dashboard</title>
 
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background-color: #0b0b0b;
-      color: #f5f5f5;
-    }
+<style>
+  :root{
+    --bg:#070707;
+    --panel:#0f1720;
+    --muted:#9aa4af;
+    --accent:#d6ff66; /* lime accent */
+    --card-radius:12px;
+    --glass: rgba(255,255,255,0.03);
+  }
 
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      background: linear-gradient(90deg, #0b0b0b, #111111);
-      border-bottom: 1px solid #1f1f1f;
-    }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial;
+    background: linear-gradient(180deg,#050506 0%, #0b0b0b 100%);
+    color:#e6eef8;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:28px;
+  }
 
-    header h1 {
-      font-size: 1.8rem;
-      letter-spacing: 1px;
-      color: #b2ff59; /* lime accent */
-    }
+  .dashboard{
+    max-width:1200px;
+    margin:0 auto;
+    background: linear-gradient(180deg, var(--panel), #071018 120%);
+    border-radius:16px;
+    padding:22px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    position:relative;
+    overflow:hidden;
+  }
 
-    main {
-      max-width: 1000px;
-      margin: 2rem auto;
-      padding: 2rem;
-      background: #141414;
-      border-radius: 20px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-    }
+  /* Header */
+  .header{
+    display:flex;
+    gap:16px;
+    align-items:center;
+  }
+  .logo{
+    width:64px;
+    height:64px;
+    border-radius:8px;
+    background:#000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex:0 0 64px;
+  }
+  .logo img{ width:100%; height:100%; object-fit:contain; display:block; border-radius:6px; }
+  .title{
+    display:flex;
+    flex-direction:column;
+  }
+  .title h1{
+    margin:0;
+    font-size:20px;
+    letter-spacing:0.2px;
+    color: #fff;
+  }
+  .title p{
+    margin:0;
+    color:var(--muted);
+    font-size:13px;
+  }
 
-    section {
-      margin-bottom: 2rem;
-    }
+  /* Body layout */
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 420px;
+    gap:20px;
+    margin-top:18px;
+  }
 
-    label {
-      font-weight: 600;
-      display: block;
-      margin-bottom: 0.5rem;
-    }
+  /* Controls panel */
+  .controls{
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));
+    padding:18px;
+    border-radius:var(--card-radius);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  }
+  .control-row{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    margin-bottom:12px;
+  }
+  label{ font-size:13px; color:var(--muted); }
+  .value-pill{
+    color:var(--accent);
+    font-weight:700;
+    font-size:14px;
+    min-width:120px;
+    text-align:right;
+  }
+  input[type=range]{
+    width:100%;
+    margin-top:8px;
+    accent-color: var(--accent);
+  }
+  .small-note{ color:var(--muted); font-size:12px; margin-top:6px; }
 
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      appearance: none;
-      background: #222;
-      border-radius: 5px;
-      outline: none;
-    }
+  /* Output card */
+  .panel{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    padding:16px;
+    border-radius:12px;
+  }
 
-    input[type="range"]::-webkit-slider-thumb {
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #b2ff59;
-      border-radius: 50%;
-      cursor: pointer;
-    }
+  .stats{
+    display:flex;
+    gap:12px;
+    margin-bottom:12px;
+  }
+  .stat{
+    flex:1;
+    background:var(--glass);
+    padding:10px;
+    border-radius:8px;
+    text-align:center;
+  }
+  .stat .num{ color:var(--accent); font-weight:700; font-size:18px; }
+  .stat .lbl{ color:var(--muted); font-size:12px; margin-top:6px; }
 
-    .output-box {
-      margin-top: 1rem;
-      font-size: 1.1rem;
-      background: #1a1a1a;
-      padding: 1rem;
-      border-radius: 12px;
-      border: 1px solid #2a2a2a;
-    }
+  /* Chart area */
+  .chart-wrap{
+    margin-bottom:12px;
+    background:linear-gradient(180deg, rgba(0,0,0,0.1), rgba(255,255,255,0.01));
+    padding:12px;
+    border-radius:10px;
+  }
+  canvas{ width:100% !important; height:320px !important; }
 
-    .chart-container {
-      position: relative;
-      height: 400px;
-      margin-top: 2rem;
-    }
+  /* Table */
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:12px;
+  }
+  th, td{
+    padding:10px 12px;
+    text-align:right;
+    font-size:13px;
+    color:#dbe9ff;
+  }
+  th:first-child, td:first-child{ text-align:left; font-weight:600; }
+  thead th{ color:#fff; border-bottom:1px solid rgba(255,255,255,0.04); }
+  tbody tr:nth-child(even){ background: rgba(255,255,255,0.012); }
 
-    .insight {
-      margin-top: 1.5rem;
-      background: #101010;
-      padding: 1rem;
-      border-left: 4px solid #b2ff59;
-      border-radius: 8px;
-      font-style: italic;
-      font-size: 1rem;
-      color: #d4d4d4;
-    }
+  /* Right column */
+  .right-col{ display:flex; flex-direction:column; gap:12px; }
+  .insight{
+    background: linear-gradient(180deg, rgba(214,255,102,0.04), rgba(214,255,102,0.02));
+    border-left:4px solid var(--accent);
+    padding:12px;
+    border-radius:10px;
+    color:#eafaf1;
+  }
 
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.9rem;
-      color: #777;
-      border-top: 1px solid #1a1a1a;
-      margin-top: 3rem;
-    }
-  </style>
+  .actions{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .btn{
+    background: linear-gradient(90deg, #2b6be8, #6b21a8);
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+    font-size:13px;
+  }
+  .btn.ghost{
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.06);
+    color:var(--muted);
+  }
+
+  /* footer inside container */
+  .dashboard-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+    color:var(--muted);
+    font-size:13px;
+  }
+
+  /* watermark used visually on-screen */
+  .watermark-screen{
+    position:absolute;
+    right:-80px;
+    bottom:-40px;
+    font-size:160px;
+    color:rgba(214,255,102,0.02);
+    transform:rotate(-25deg);
+    pointer-events:none;
+    user-select:none;
+  }
+
+  @media (max-width:1100px){
+    .grid{ grid-template-columns: 1fr; }
+    .right-col{ order:2; }
+  }
+</style>
 </head>
 <body>
 
-  <header>
-    <h1>LMTS Valuation Dashboard</h1>
-  </header>
+<div class="dashboard" id="reportRoot">
+  <div class="header">
+    <div class="logo" title="LMTS">
+      <!-- Put your logo file (logo.png) next to this HTML file -->
+      <img id="logoImg" src="logo.png" alt="LMTS logo" />
+    </div>
+    <div class="title">
+      <h1>LMTS Valuation Dashboard</h1>
+      <p>Interactive airdrop valuation • Prepared by 0pttimus</p>
+    </div>
+  </div>
 
-  <main>
-    <section>
-      <label for="marketCap">Market Cap: <span id="marketCapValue">$100,000,000</span></label>
-      <input type="range" id="marketCap" min="10000000" max="1000000000" step="1000000" value="100000000">
-    </section>
+  <div class="grid" style="margin-top:16px;">
+    <!-- Left main column -->
+    <div>
+      <div class="controls panel">
+        <div class="control-row">
+          <label>Market Cap</label>
+          <div class="value-pill" id="marketCapLabel">$100,000,000</div>
+        </div>
+        <input type="range" id="marketCap" min="10000000" max="1000000000" step="10000000" value="100000000" />
 
-    <section>
-      <label for="supply">Circulating Supply: <span id="supplyValue">100,000,000</span> tokens</label>
-      <input type="range" id="supply" min="1000000" max="1000000000" step="1000000" value="100000000">
-    </section>
+        <div class="control-row" style="margin-top:12px;">
+          <label>Circulating Supply</label>
+          <div class="value-pill" id="supplyLabel">100,000,000</div>
+        </div>
+        <input type="range" id="supply" min="10000000" max="500000000" step="10000000" value="100000000" />
+        <div class="small-note">Tip: move sliders to simulate scarcity/liquidity trade-offs.</div>
+      </div>
 
-    <section class="output-box">
-      <p>💰 <strong>Token Price:</strong> $<span id="price">1.00</span></p>
-      <p>📈 <strong>Portfolio Values:</strong></p>
-      <ul id="portfolioList"></ul>
-    </section>
+      <div style="height:12px;"></div>
 
-    <section class="chart-container">
-      <canvas id="valuationChart"></canvas>
-    </section>
+      <div class="panel">
+        <div class="stats">
+          <div class="stat">
+            <div class="num" id="priceStat">$1.00</div>
+            <div class="lbl">Price / Token</div>
+          </div>
+          <div class="stat">
+            <div class="num" id="airdropPool">3,750,000</div>
+            <div class="lbl">Airdrop Pool (LMTS)</div>
+          </div>
+          <div class="stat">
+            <div class="num" id="recipients">250</div>
+            <div class="lbl">Recipients</div>
+          </div>
+        </div>
 
-    <section class="insight" id="insightText">
-      At $100M market cap and 100M tokens, LMTS price is $1.00 — your 50k tokens would be worth $50,000.
-    </section>
-  </main>
+        <div class="chart-wrap">
+          <canvas id="priceChart"></canvas>
+        </div>
 
-  <footer>
-    © 2025 LMTS Valuation Dashboard. All Rights Reserved.
-  </footer>
+        <table aria-label="tier table">
+          <thead>
+            <tr><th>Tier</th><th>Tokens</th><th>Value (USD)</th></tr>
+          </thead>
+          <tbody id="tierTableBody">
+            <!-- rows populated by JS -->
+          </tbody>
+        </table>
 
-  <script>
-    const marketCapInput = document.getElementById("marketCap");
-    const supplyInput = document.getElementById("supply");
-    const marketCapValue = document.getElementById("marketCapValue");
-    const supplyValue = document.getElementById("supplyValue");
-    const priceEl = document.getElementById("price");
-    const portfolioList = document.getElementById("portfolioList");
-    const insightText = document.getElementById("insightText");
+      </div>
+    </div>
 
-    const portfolioSizes = [50000, 15000, 10000, 5000, 2000];
-    const ctx = document.getElementById("valuationChart").getContext("2d");
+    <!-- Right column -->
+    <aside class="right-col">
+      <div class="panel insight">
+        <div style="font-weight:700; margin-bottom:6px;">Key Insight</div>
+        <div id="insightText">Move the sliders to generate an insight summary.</div>
+      </div>
 
-    const chart = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: [],
-        datasets: [{
-          label: "Token Price ($)",
-          data: [],
-          borderColor: "#b2ff59",
-          borderWidth: 2,
-          tension: 0.25,
-          fill: false
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            labels: {
-              color: "#f5f5f5"
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: "#aaa" },
-            title: { display: true, text: "Market Cap ($)", color: "#ccc" },
-            grid: { color: "#222" }
-          },
-          y: {
-            ticks: { color: "#aaa" },
-            title: { display: true, text: "Token Price ($)", color: "#ccc" },
-            grid: { color: "#222" }
-          }
-        }
-      }
-    });
+      <div class="panel" style="text-align:center; color:var(--muted); font-size:13px;">
+        <div style="font-weight:700; color:#fff;">LMTS</div>
+        <div style="margin-top:8px;">Token Supply: 1.5B • Airdrop: 0.25%</div>
+      </div>
+    </aside>
+  </div>
 
-    function formatNumber(num) {
-      return num.toLocaleString();
-    }
+  <div class="dashboard-footer">
+    <div>Prepared by <strong>0pttimus</strong></div>
+    <div style="color:var(--muted)">© 2025 • LMTS Valuation Dashboard</div>
+  </div>
 
-    function updateDashboard() {
-      const marketCap = parseFloat(marketCapInput.value);
-      const supply = parseFloat(supplyInput.value);
-      const price = marketCap / supply;
+  <div class="watermark-screen">LMTS</div>
+</div>
 
-      marketCapValue.textContent = `$${formatNumber(marketCap)}`;
-      supplyValue.textContent = formatNumber(supply);
-      priceEl.textContent = price.toFixed(4);
+<script>
+/* -------------------------
+   Constants & tiers
+   ------------------------- */
+const TOTAL_SUPPLY = 1500000000;
+const AIRDROP_PCT = 0.0025; // 0.25%
+const AIRDROP_POOL = TOTAL_SUPPLY * AIRDROP_PCT; // 3,750,000
+const RECIPIENTS = 250;
 
-      portfolioList.innerHTML = "";
-      portfolioSizes.forEach(size => {
-        const value = size * price;
-        const li = document.createElement("li");
-        li.textContent = `${formatNumber(size)} tokens = $${formatNumber(value.toFixed(2))}`;
-        portfolioList.appendChild(li);
-      });
+const TIERS = [
+  { name: "Top 1-15 (per user)", totalPct: 0.30, users: 15 }, // 30% of pool
+  { name: "Top 16-50 (per user)", totalPct: 0.20, users: 35 },
+  { name: "Top 51-100 (per user)", totalPct: 0.20, users: 50 },
+  { name: "Top 101-200 (per user)", totalPct: 0.20, users: 100 },
+  { name: "Top 201-250 (per user)", totalPct: 0.10, users: 50 }
+];
 
-      insightText.textContent = `At $${formatNumber(marketCap)} market cap and ${formatNumber(supply)} tokens, LMTS price is $${price.toFixed(4)} — your 50k tokens would be worth $${formatNumber((50000 * price).toFixed(2))}.`;
+// DOM
+const marketCapEl = document.getElementById('marketCap');
+const supplyEl = document.getElementById('supply');
+const marketCapLabel = document.getElementById('marketCapLabel');
+const supplyLabel = document.getElementById('supplyLabel');
+const priceStat = document.getElementById('priceStat');
+document.getElementById('airdropPool').innerText = AIRDROP_POOL.toLocaleString();
+document.getElementById('recipients').innerText = RECIPIENTS;
 
-      // Update chart data
-      const newLabels = [];
-      const newData = [];
-      for (let cap = 10000000; cap <= 1000000000; cap += 50000000) {
-        newLabels.push(cap / 1e6 + "M");
-        newData.push(cap / supply);
-      }
-      chart.data.labels = newLabels;
-      chart.data.datasets[0].data = newData;
-      chart.update();
-    }
+// tier table body
+const tierTableBody = document.getElementById('tierTableBody');
+const insightText = document.getElementById('insightText');
 
-    marketCapInput.addEventListener("input", updateDashboard);
-    supplyInput.addEventListener("input", updateDashboard);
+/* -------------------------
+   Chart setup
+   ------------------------- */
+const priceCtx = document.getElementById('priceChart').getContext('2d');
+const marketLabels = Array.from({length:11},(_,i)=> (i*100_000_000).toLocaleString());
+const priceChart = new Chart(priceCtx, {
+  type: 'line',
+  data: {
+    labels: marketLabels,
+    datasets: [{
+      label: 'Token Price (USD)',
+      data: [],
+      borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#d6ff66',
+      backgroundColor: 'rgba(214,255,102,0.08)',
+      tension: 0.25,
+      pointRadius: 2,
+      fill:true,
+      borderWidth:2
+    }]
+  },
+  options: {
+    responsive:true,
+    maintainAspectRatio:false,
+    scales:{
+      x:{ ticks: { color: '#9fb3d9' }, title:{ display:true, text:'Market Cap (USD)' } },
+      y:{ ticks: { color: '#9fb3d9' }, title:{ display:true, text:'Price per Token (USD)' } }
+    },
+    plugins:{ legend:{ display:false } }
+  }
+});
 
-    updateDashboard();
-  </script>
+/* -------------------------
+   Helpers
+   ------------------------- */
+function formatUSD(v){
+  if (v >= 1e9) return '$' + (v/1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v/1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + (v/1e3).toFixed(2) + 'K';
+  return '$' + v.toFixed(2);
+}
+function formatNumber(n){ return Number(n).toLocaleString(); }
 
+/* -------------------------
+   Core update logic
+   ------------------------- */
+function updateAll(){
+  const marketCap = Number(marketCapEl.value); // in USD
+  const supply = Number(supplyEl.value); // token units
+  marketCapLabel.innerText = formatUSD(marketCap);
+  supplyLabel.innerText = formatNumber(supply);
+
+  // token price
+  const tokenPrice = marketCap / supply;
+  priceStat.innerText = formatUSD(tokenPrice);
+
+  // fill tier table
+  tierTableBody.innerHTML = '';
+  TIERS.forEach(t => {
+    const totalTokens = Math.round(AIRDROP_POOL * t.totalPct);
+    const perUser = Math.round(totalTokens / t.users);
+    const perUserUSD = perUser * tokenPrice;
+    const row = document.createElement('tr');
+    row.innerHTML = `<td>${t.name}</td><td>${formatNumber(perUser)}</td><td style="font-weight:700">${formatUSD(perUserUSD)}</td>`;
+    tierTableBody.appendChild(row);
+  });
+
+  // update chart: show price curve for sample market caps
+  const sampleCaps = Array.from({length:11},(_,i)=> (i*100_000_000));
+  const data = sampleCaps.map(cap => (cap===0?0: (cap / supply)));
+  priceChart.data.datasets[0].data = data;
+  priceChart.update('none');
+
+  // insight
+  const topTier = TIERS[0];
+  const topPerUser = Math.round((AIRDROP_POOL * topTier.totalPct) / topTier.users);
+  const topValue = topPerUser * tokenPrice;
+  insightText.innerHTML = `
+    At a market cap of <strong>${formatUSD(marketCap)}</strong> and circulating supply of <strong>${formatNumber(supply)}</strong> tokens, 
+    <strong>LMTS market price = ${formatUSD(tokenPrice)}</strong>. A Top-tier recipient (~Top 1-15) would hold <strong>${formatNumber(topPerUser)} LMTS</strong> 
+    worth ~ <strong>${formatUSD(topValue)}</strong>.
+  `;
+}
+
+/* -------------------------
+   Attach events
+   ------------------------- */
+marketCapEl.addEventListener('input', updateAll);
+supplyEl.addEventListener('input', updateAll);
+
+/* initial render */
+updateAll();
+</script>
 </body>
 </html>
